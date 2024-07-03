@@ -1,0 +1,37 @@
+.result{
+    padding: 140px 0 31px 0;
+    text-align: center;
+}
+.result-content{
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    align-items: center;
+}
+.result-image{
+    position: absolute;
+    top: 225px;
+    z-index: -1;
+}
+.result-title{
+    max-width: 588px;
+    margin-bottom: 60px;
+}
+.result-scope{
+    background-image: url("/img/result-img.png");
+    background-size: cover;
+    background-position: center;
+    width: 480px;
+    height: 388px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFF;
+    font-family: "Museo Sans Cyrl Bold",sans-serif;
+    font-size: 158px;
+    line-height: 190px;
+}
+.result-answers{
+    align-items: flex-end;
+    margin-top: 80px;
+}
