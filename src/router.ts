@@ -4,6 +4,8 @@ import {Test} from "./components/test";
 import {Result} from "./components/result";
 import {Answers} from "./components/answers";
 import {Auth} from "./services/auth";
+import {RouteType} from "./types/route.type";
+import {UserInfoType} from "./types/user-info.type";
 
 export class Router {
     readonly contentElement: HTMLElement | null;
@@ -12,7 +14,7 @@ export class Router {
     readonly profileElement: HTMLElement | null;
     readonly profileFullNameElement: HTMLElement | null;
 
-    private routers: {route: string, title: string, template: string, styles: string, load: () => void}[];
+    private routes: RouteType[];
 
     constructor() {
         this.contentElement = document.getElementById('content')
@@ -21,7 +23,7 @@ export class Router {
         this.profileElement = document.getElementById('profile')
         this.profileFullNameElement = document.getElementById('profile-full-name')
 
-        this.routers = [
+        this.routes = [
             {
                 route: '#/',
                 title: 'Главная',
@@ -87,27 +89,44 @@ export class Router {
         ]
     }
 
-    async openRoute() {
-        const urlRoute = window.location.hash.split('?')[0]
+    public async openRoute(): Promise<void> {
+        const urlRoute: string = window.location.hash.split('?')[0]
         if (urlRoute === '#/logout'){
-            await Auth.logout()
-            window.location.href = '#/'
-            return;
+            const result:boolean = await Auth.logout()
+            if (result){
+                window.location.href = '#/'
+                return;
+            } else{
+                alert('Ошибка выхода')
+            }
+
         }
-        const newRoute = this.routers.find(item => item.route === urlRoute)
+        const newRoute: RouteType | undefined = this.routes.find(item => item.route === urlRoute)
 
         if (!newRoute) {
             window.location.href = '#/'
             return
         }
 
+        if (!this.contentElement || !this.stylesElement || !this.titleElement || !this.profileElement || !this.profileFullNameElement) {
+            if (urlRoute === '#/') {
+                return
+            }else{
+                window.location.href = '#/'
+                return
+            }
+        }
+        // проверка на null и undefined в случае если элемент не существует, что приведет к ошибке в работе кода
+        // поэтому проверяем на null и undefined в случае если элемент существует, то продолжаем работу и ошибки нет
+        // в начале мы определили элементы и даем им типы HTMLElement | null
+
         this.contentElement.innerHTML =
             await fetch(newRoute.template).then(response => response.text())
         this.stylesElement.setAttribute('href', newRoute.styles)
         this.titleElement.innerText = newRoute.title
 
-        const userInfo = Auth.getUserInfo()
-        const accessToken = localStorage.getItem(Auth.accessTokenKey)
+        const userInfo: UserInfoType | null = Auth.getUserInfo()
+        const accessToken: string | null = localStorage.getItem(Auth.accessTokenKey)
         if (userInfo && accessToken) {
             this.profileElement.style.display = 'flex'
             this.profileFullNameElement.innerText= userInfo.fullName

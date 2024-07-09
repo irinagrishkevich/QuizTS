@@ -1,16 +1,20 @@
-import config from "../../config/config.js";
+import config from "../../config/config";
+import {UserInfoType} from "../types/user-info.type";
+import {RefreshResponseType} from "../types/refresh-response.type";
+import {logoutResponseType} from "../types/logout-response.type";
 
 export class Auth {
 
-    static accessTokenKey = 'accessToken'
-    static refreshTokenKey = 'refreshToken'
-    static userInfoKey = 'userInfo'
-    static emailKey = 'email'
+    public static accessTokenKey: string = 'accessToken'
+    private static refreshTokenKey: string = 'refreshToken' //используется только в рамках этого класса - private
+    private static userInfoKey: string = 'userInfo'
+    private static emailKey: string = 'email'
 
-    static async processUnauthorizedResponse() {
-        const refreshToken = localStorage.getItem(this.refreshTokenKey)
+
+    public static async processUnauthorizedResponse(): Promise<boolean> {
+        const refreshToken: string | null = localStorage.getItem(this.refreshTokenKey)
         if (refreshToken) {
-            const response = await fetch(config.host + '/refresh', {
+            const response: Response = await fetch(config.host + '/refresh', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -20,8 +24,8 @@ export class Auth {
             })
 
             if (response && response.status === 200) {
-                const result = await response.json()
-                if (result && !result.error) {
+                const result: RefreshResponseType | null = await response.json()
+                if (result && !result.error && result.accessToken && result.refreshToken) { //доп проверка на наличие токенов в ответе, ибо указан в файле refresh-response.type string или поля может не быть(undefined)
                     this.setTokens(result.accessToken, result.refreshToken)
                     return true
                     // } else {
@@ -36,10 +40,10 @@ export class Auth {
         return false
     }
 
-    static async logout(){
-        const refreshToken = localStorage.getItem(this.refreshTokenKey)
+    public static async logout(): Promise<boolean> {
+        const refreshToken: string | null = localStorage.getItem(this.refreshTokenKey)
         if (refreshToken) {
-            const response = await fetch(config.host + '/logout', {
+            const response: Response = await fetch(config.host + '/logout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -49,46 +53,50 @@ export class Auth {
             })
 
             if (response && response.status === 200) {
-                const result = await response.json()
+                const result: logoutResponseType | null = await response.json()
                 if (result && !result.error) {
                     this.removeTokens()
-                    localStorage.removeItem(Auth.userInfoKey)
+                    localStorage.removeItem(this.userInfoKey)
                     return true
-                    // } else {
-                    //     throw new Error(result.message)
-                    // }
+                } else {
+                    throw new Error(response.statusText)
                 }
             }
         }
+        return false
 
 
     }
 
-    static setTokens(accessToken, refreshToken) {
+    public static setTokens(accessToken: string, refreshToken: string): void {
         localStorage.setItem(this.accessTokenKey, accessToken);
         localStorage.setItem(this.refreshTokenKey, refreshToken);
     }
 
-    static removeTokens() {
+    private static removeTokens(): void {
         localStorage.removeItem(this.accessTokenKey);
         localStorage.removeItem(this.refreshTokenKey);
     }
-    static setUserInfo(info){
+
+    public static setUserInfo(info: UserInfoType): void {
         localStorage.setItem(this.userInfoKey, JSON.stringify(info))
     }
-    static getUserInfo(){
-        const userInfo = localStorage.getItem(this.userInfoKey)
-        if(userInfo){
+
+    public static getUserInfo(): UserInfoType | null {
+        const userInfo: string | null = localStorage.getItem(this.userInfoKey)
+        if (userInfo) {
             return JSON.parse(userInfo)
         }
         return null
     }
-    static setEmail(email) {
+
+    public static setEmail(email: string): void {
         localStorage.setItem(this.emailKey, email);
     }
-    static getEmail(){
-        const userInfoEmail = localStorage.getItem(this.emailKey)
-        if(userInfoEmail){
+
+    public static getEmail():string | null {
+        const userInfoEmail: string | null = localStorage.getItem(this.emailKey)
+        if (userInfoEmail) {
             return userInfoEmail
         }
         return null

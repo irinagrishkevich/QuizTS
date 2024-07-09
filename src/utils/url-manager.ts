@@ -1,10 +1,12 @@
-export class UrlManager{
-    static getQueryParams(){
-        const qs = document.location.hash.split('+').join(' ');
+import {QueryParamsType} from "../types/query-params.type";
 
-        let params = {},
-            tokens,
-            re = /[?&]([^=]+)=([^&]*)/g;
+export class UrlManager{
+    public static getQueryParams(){
+        const qs: string = document.location.hash.split('+').join(' ');
+
+        let params:QueryParamsType = {}, // если мы будем использовать этот тип в других файлах, то создаем отдельный файл для типов
+            tokens:RegExpExecArray | null,
+            re: RegExp = /[?&]([^=]+)=([^&]*)/g;
 
         while (tokens = re.exec(qs)) {
             params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
@@ -12,10 +14,5 @@ export class UrlManager{
 
         return params;
     }
-    static checkUserData(params){
-        if(!params.name || !params.lastName || !params.email){
-            location.href = '#/'
 
-        }
-    }
 }
