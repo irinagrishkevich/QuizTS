@@ -2,6 +2,8 @@ import {CustomHttp} from "../services/custom-http";
 import {Auth} from "../services/auth";
 import config from "../../config/config";
 import {FormFieldType} from "../types/form-field.type";
+import {SignupResponseType} from "../types/signup-response.type";
+import {LoginResponseType} from "../types/login-response.type";
 
 export class Form {
     readonly agreeElement: HTMLInputElement | null
@@ -11,6 +13,8 @@ export class Form {
 
 
     constructor(page: 'signup' | 'login') {
+        this.processElement = null
+        this.agreeElement = null
         this.page = page
         const accessToken: string | null = localStorage.getItem(Auth.accessTokenKey)
         if (accessToken) {
@@ -120,7 +124,7 @@ export class Form {
 
             if (this.page === 'signup') {
                 try {
-                    const result = await CustomHttp.request(config.host + '/signup', 'POST', {
+                    const result: SignupResponseType = await CustomHttp.request(config.host + '/signup', 'POST', {
                         name: this.fields.find(item => item.name === 'name')?.element?.value,
                         lastName: this.fields.find(item => item.name === 'lastName')?.element?.value,
                         email: email,
@@ -138,7 +142,7 @@ export class Form {
                 }
             }
             try {
-                const result = await CustomHttp.request(config.host + '/login', 'POST', {
+                const result: LoginResponseType = await CustomHttp.request(config.host + '/login', 'POST', {
                     email: email,
                     password: password
                 })

@@ -1,9 +1,27 @@
-import {UrlManager} from "../utils/url-manager.js";
-import {CustomHttp} from "../services/custom-http.js";
-import config from "../../config/config.js";
-import {Auth} from "../services/auth.js";
+import {UrlManager} from "../utils/url-manager";
+import {CustomHttp} from "../services/custom-http";
+import config from "../../config/config";
+import {Auth} from "../services/auth";
+import {QuizAnswerType, QuizQuestionType, TestFindType} from "../types/quiz.type";
+import {QueryParamsType} from "../types/query-params.type";
+import {UserInfoType} from "../types/user-info.type";
+import {DefaultResponseType} from "../types/defaul-response.type";
+import {PassTestResponseType} from "../types/pass-test-response.type";
+import {TestAnswerType} from "../types/test-answer.type";
+
 
 export class Answers {
+    private quiz: TestFindType | null
+    private userInfo: UserInfoType | null
+    private questionElement: HTMLElement | null
+    private resultButtonElement: HTMLElement | null
+    private optionsElement: HTMLElement | null
+    private optionElement: HTMLElement | null
+    private currentQuestionIndex: number
+    private chosenAnswersIds: number[]
+    private quizAnswersRight: TestAnswerType[]
+    private routeParams: QueryParamsType
+
     constructor() {
         this.quiz = null
         this.questionElement = null
@@ -14,27 +32,41 @@ export class Answers {
         this.chosenAnswersIds = []
         this.quizAnswersRight = []
         this.routeParams = UrlManager.getQueryParams()
-
+        this.userInfo = Auth.getUserInfo()
+        if (!this.userInfo) {
+            location.href = '#/'
+            return
+        }
 
         this.init()
-
-        document.getElementById('test-user').innerHTML = 'Тест выполнил: ' + '<span>' + Auth.getUserInfo().fullName + ', ' + Auth.getEmail() + '</span>'
+        const testUserElement: HTMLElement | null = document.getElementById('test-user')
+        if (testUserElement) {
+            if(this.userInfo){
+                testUserElement.innerHTML = 'Тест выполнил: ' + '<span>' + this.userInfo.fullName + ', ' + Auth.getEmail() + '</span>'
+            }
+        }
         this.resultButtonElement = document.getElementById('link')
         const that = this
-        this.resultButtonElement.addEventListener('click', function () {
-            location.href = '#/result?id=' + that.routeParams.id
-        });
+        if (this.resultButtonElement) {
+            this.resultButtonElement.addEventListener('click', function () {
+                location.href = '#/result?id=' + that.routeParams.id
+            });
+        }
+
     }
 
-    async init() {
-        const userInfo = Auth.getUserInfo()
+    private async init(): Promise<void> {
+        if (!this.userInfo) {
+            location.href = '#/'
+            return
+        }
         try {
-            const result = await CustomHttp.request(config.host +'/tests/' + this.routeParams.id + '/result?userId=' + userInfo.userId)
+            const result: TestAnswerType[] | DefaultResponseType = await CustomHttp.request(config.host + '/tests/' + this.routeParams.id + '/result?userId=' + this.userInfo.userId)
             if (result) {
-                if (result.error) {
-                    throw new Error(result.error)
+                if ((result as DefaultResponseType).error !== undefined) {
+                    throw new Error((result as DefaultResponseType).message)
                 }
-                this.quizAnswersRight = result
+                this.quizAnswersRight = result as TestAnswerType[]
             }
 
         } catch (error) {
@@ -42,68 +74,79 @@ export class Answers {
         }
 
 
-        if (userInfo) {
-            try {
-                const result = await CustomHttp.request(config.host +'/tests/' + this.routeParams.id + '/result/details?userId=' + userInfo.userId)
+        try {
+            const result: TestFindType | DefaultResponseType   = await CustomHttp.request(config.host + '/tests/' + this.routeParams.id + '/result/details?userId=' + this.userInfo.userId)
 
-                if (result) {
-                    if (result.error) {
-                        throw new Error(result.error)
-                    }
-                    this.quiz = result
+            if (result) {
+                if ((result as DefaultResponseType).error !== undefined) {
+                    throw new Error((result as DefaultResponseType).message)
                 }
+                this.quiz = result as TestFindType
 
-            } catch (error) {
-                return console.error(error)
             }
 
+        } catch (error) {
+            return console.error(error)
         }
         this.start()
 
     }
 
 
-    start() {
-        this.quiz.test.questions.forEach((question, index) => {
+    private start(): void {
+        if (!this.quiz) return
+        this.quiz.test.questions.forEach((question:QuizQuestionType, index:number) => {
             this.currentQuestionIndex = index + 1;
             this.showQuestion();
         });
     }
 
-    showQuestion() {
-        document.getElementById('test-name').innerText = this.quiz.test.name
-        const activeQuestion = this.quiz.test.questions[this.currentQuestionIndex - 1];
-        console.log(activeQuestion)
-        const questionElement = document.createElement('div');
-        questionElement.className = 'common-question-title';
-        questionElement.innerHTML = '<span>Вопрос ' + this.currentQuestionIndex + ': </span>' + activeQuestion.question;
+    private showQuestion(): void {
+        if (!this.quiz) return
+        const testNameElement: HTMLElement | null = document.getElementById('test-name')
+        if (testNameElement){
+            testNameElement.innerText = this.quiz.test.name
 
-        const optionsElement = document.createElement('div');
+        }
+        const activeQuestion: QuizQuestionType = this.quiz.test.questions[this.currentQuestionIndex - 1];
+
+        const questionElement: HTMLElement | null = document.createElement('div');
+        questionElement.className = 'common-question-title';
+        if (questionElement){
+            questionElement.innerHTML = '<span>Вопрос ' + this.currentQuestionIndex + ': </span>' + activeQuestion.question;
+        }
+
+        const optionsElement: HTMLElement | null = document.createElement('div');
         optionsElement.className = 'answers-options';
 
-        const allQuestionAndAnswers = document.createElement('div');
+        const allQuestionAndAnswers: HTMLElement | null = document.createElement('div');
         allQuestionAndAnswers.className = 'all-question-and-answers'
 
 
-        activeQuestion.answers.forEach(answer => {
+        activeQuestion.answers.forEach((answer: QuizAnswerType) => {
 
-            const optionElement = document.createElement('div');
+            const optionElement: HTMLElement | null = document.createElement('div');
             optionElement.className = 'answers-question-option';
 
-            const inputId = answer.id;
-            const inputName = activeQuestion.id;
-            const inputElement = document.createElement('input');
+            const inputId:number = answer.id;
+            const inputName: number = activeQuestion.id;
+            const inputElement: HTMLInputElement | null = document.createElement('input');
             inputElement.className = 'option-answer';
-            inputElement.setAttribute('id', inputId);
-            inputElement.setAttribute('type', 'radio');
-            inputElement.setAttribute('name', inputName);
-            inputElement.setAttribute('value', answer.id);
-            inputElement.setAttribute('disabled', 'disabled');
+            if (inputElement){
+                inputElement.setAttribute('id', inputId.toString());
+                inputElement.setAttribute('type', 'radio');
+                inputElement.setAttribute('name', inputName.toString());
+                inputElement.setAttribute('value', answer.id.toString());
+                inputElement.setAttribute('disabled', 'disabled');
+            }
 
 
-            const labelElement = document.createElement('label');
-            labelElement.setAttribute('for', inputId);
-            labelElement.innerText = answer.answer;
+            const labelElement: HTMLElement | null = document.createElement('label');
+            if (labelElement){
+                labelElement.setAttribute('for', inputId.toString());
+                labelElement.innerText = answer.answer;
+            }
+
 
             optionElement.appendChild(inputElement);
             optionElement.appendChild(labelElement);
@@ -111,23 +154,26 @@ export class Answers {
             optionsElement.appendChild(optionElement);
             allQuestionAndAnswers.appendChild(questionElement);
             allQuestionAndAnswers.appendChild(optionsElement);
-            if (this.chosenAnswersIds.includes(answer.id.toString())) {
+            if (this.chosenAnswersIds.includes(answer.id)) {
                 inputElement.setAttribute('checked', 'checked');
-                const correctAnswer = this.quizAnswersRight.find(correct => correct === answer.id);
+                const correctAnswer: TestAnswerType | undefined = this.quizAnswersRight.find((correct:TestAnswerType):boolean => correct.correct && correct.user_id === answer.id);
                 if (correctAnswer) {
                     inputElement.classList.add('correct');
                 } else {
                     inputElement.classList.add('un-correct');
                 }
             }
-            if (answer.correct === true) {
-                    inputElement.classList.add('correct');
-                } else if(answer.correct === false){
-                    inputElement.classList.add('un-correct');
+            if (answer.correct) {
+                inputElement.classList.add('correct');
+            } else if (answer.correct === false) {
+                inputElement.classList.add('un-correct');
 
             }
         });
-        document.getElementById('question').appendChild(allQuestionAndAnswers)
+        const questionBlockElement: HTMLElement | null = document.getElementById('question')
+        if (questionBlockElement){
+            questionBlockElement.appendChild(allQuestionAndAnswers)
+        }
     }
 }
 
